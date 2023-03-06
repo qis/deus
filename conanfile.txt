@@ -1,0 +1,6 @@
+[requires]
+boost/[x]
+onetbb/[x]
+
+[generators]
+cmake_find_package

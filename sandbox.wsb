@@ -1,0 +1,15 @@
+<Configuration>
+<VGpu>Enable</VGpu>
+<Networking>Default</Networking>
+<MappedFolders>
+  <MappedFolder>
+    <HostFolder>C:\Workspace\deus</HostFolder>
+    <SandboxFolder>C:\Workspace\deus</SandboxFolder>
+    <ReadOnly>false</ReadOnly>
+  </MappedFolder>
+</MappedFolders>
+<MemoryInMB>8192</MemoryInMB>
+<LogonCommand>
+  <Command>C:\Workspace\deus\sandbox.cmd</Command>
+</LogonCommand>
+</Configuration>
