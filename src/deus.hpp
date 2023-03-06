@@ -4,6 +4,7 @@
 #include <winioctl.h>
 #include <winternl.h>
 #include <algorithm>
+#include <concepts>
 #include <expected>
 #include <functional>
 #include <iterator>
@@ -150,9 +151,29 @@ private:
   PSLIST_HEADER header_ = nullptr;
 };
 
+// clang-format off
+
+template <class T>
+concept SignatureScanCallback = requires(T&& callback, void* data) {
+  { std::forward<T>(callback)(data) } -> std::convertible_to<bool>;
+};
+
+template <class T>
+concept SignatureScanConstCallback = requires(T&& callback, const void* data) {
+  { std::forward<T>(callback)(data) } -> std::convertible_to<bool>;
+};
+
+// clang-format on
+
 class signature {
 public:
   signature(const BYTE* data, SIZE_T size) noexcept : size_(size), data_(data, data + size) {}
+
+  signature(const BYTE* data, const BYTE* mask, SIZE_T size) noexcept : size_(size), data_(size * 2)
+  {
+    std::memcpy(data_.data(), data, size);
+    std::memcpy(data_.data() + size, mask, size);
+  }
 
   signature(std::string_view signature) noexcept : size_(signature.size() / 2)
   {
@@ -175,16 +196,32 @@ public:
     }
   }
 
-  __forceinline void* scan(void* data, SIZE_T size) const noexcept
+  __forceinline void* scan(void* begin, void* end) const noexcept
   {
-    const auto begin = static_cast<BYTE*>(data);
-    return scan(begin, begin + size, this->data(), mask(), size_);
+    const auto bytes_begin = reinterpret_cast<BYTE*>(begin);
+    const auto bytes_end = reinterpret_cast<BYTE*>(end);
+    return scan_impl(bytes_begin, bytes_end, data(), mask(), size());
   }
 
-  __forceinline const void* scan(const void* data, SIZE_T size) const noexcept
+  __forceinline const void* scan(const void* begin, const void* end) const noexcept
   {
-    const auto begin = static_cast<const BYTE*>(data);
-    return scan(begin, begin + size, this->data(), mask(), size_);
+    const auto bytes_begin = reinterpret_cast<const BYTE*>(begin);
+    const auto bytes_end = reinterpret_cast<const BYTE*>(end);
+    return scan_impl(bytes_begin, bytes_end, data(), mask(), size());
+  }
+
+  __forceinline void scan(void* begin, void* end, SignatureScanCallback auto&& callback) const
+  {
+    const auto bytes_begin = reinterpret_cast<BYTE*>(begin);
+    const auto bytes_end = reinterpret_cast<BYTE*>(end);
+    scan_impl(bytes_begin, bytes_end, std::forward<decltype(callback)>(callback));
+  }
+
+  __forceinline void scan(const void* begin, const void* end, SignatureScanConstCallback auto&& callback) const
+  {
+    const auto bytes_begin = reinterpret_cast<const BYTE*>(begin);
+    const auto bytes_end = reinterpret_cast<const BYTE*>(end);
+    scan_impl(bytes_begin, bytes_end, std::forward<decltype(callback)>(callback));
   }
 
   constexpr BYTE* data() noexcept
@@ -213,8 +250,25 @@ public:
   }
 
 private:
+  template <class T, class Callback>
+  void scan_impl(T* begin, T* end, Callback&& callback) const
+  {
+    const auto signature_data = data();
+    const auto signature_mask = mask();
+    const auto signature_size = size();
+    for (auto address = begin; address != end; reinterpret_cast<UINT_PTR&>(address)++) {
+      address = scan_impl(address, end, signature_data, signature_mask, signature_size);
+      if (address == end) {
+        break;
+      }
+      if (!callback(address)) {
+        break;
+      }
+    }
+  }
+
   template <class T>
-  static T* scan(T* begin, T* end, const BYTE* data, const BYTE* mask, SIZE_T size) noexcept
+  static T* scan_impl(T* begin, T* end, const BYTE* data, const BYTE* mask, SIZE_T size) noexcept
   {
     if (mask) {
       std::size_t mask_index = 0;
@@ -226,12 +280,10 @@ private:
         return false;
       };
       const auto searcher = std::default_searcher(data, data + size, compare);
-      const auto it = std::search(begin, end, searcher);
-      return it != end ? it : nullptr;
+      return std::search(begin, end, searcher);
     }
     const auto searcher = std::boyer_moore_horspool_searcher(data, data + size);
-    const auto it = std::search(begin, end, searcher);
-    return it != end ? it : nullptr;
+    return std::search(begin, end, searcher);
   }
 
   static constexpr BYTE data_cast(CHAR c) noexcept
@@ -257,6 +309,15 @@ private:
   SIZE_T size_{ 0 };
   std::vector<BYTE> data_;
 };
+
+// clang-format off
+
+template <class T>
+concept DeviceScanCallback = requires(T&& callback, UINT_PTR address) {
+  { std::forward<T>(callback)(address) } -> std::convertible_to<bool>;
+};
+
+// clang-format on
 
 class DEUS_API device {
 public:
@@ -303,46 +364,61 @@ public:
     return regions;
   }
 
-  result<UINT_PTR> scan(UINT_PTR address, SIZE_T size, const signature& signature) noexcept
+  result<UINT_PTR> scan(UINT_PTR begin, UINT_PTR end, const signature& signature) noexcept
   {
-    const auto signature_data = signature.data();
-    const auto signature_mask = signature.mask();
-    const auto signature_size = signature.size();
-    const auto copy_size = signature_mask ? signature_size * 2 : signature_size;
-    const auto data_size = sizeof(deus::scan) + copy_size;
-    const auto data = static_cast<deus::scan*>(_aligned_malloc(data_size, alignof(deus::scan)));
-    if (!data) {
+    const auto data = signature.data();
+    const auto mask = signature.mask();
+    const auto size = signature.size();
+    const auto data_size = mask ? size * 2 : size;
+    const auto scan_size = sizeof(deus::scan) + data_size;
+    const auto scan = static_cast<deus::scan*>(_aligned_malloc(scan_size, alignof(deus::scan)));
+    if (!scan) {
       return error(STATUS_NO_MEMORY);
     }
-    data->begin = address;
-    data->end = address + size;
-    data->pos = deus::npos;
-    data->size = signature_size;
-    std::memcpy(data + 1, signature_data, copy_size);
-    UINT_PTR pos = deus::npos;
-    const auto rv = control(code::scan, data, data_size);
-    if (rv) {
-      pos = data->pos;
-    }
-    _aligned_free(data);
+    scan->begin = begin;
+    scan->end = end;
+    scan->address = end;
+    scan->size = size;
+    std::memcpy(scan + 1, data, data_size);
+    const auto rv = control(code::scan, scan, scan_size);
+    const auto address = rv ? scan->address : end;
+    _aligned_free(scan);
     if (!rv) {
       return error(rv.error());
     }
-    return pos;
+    return address;
   }
 
-  result<SIZE_T> read(UINT_PTR src, UINT_PTR dst, SIZE_T size) noexcept
+  result<void> scan(UINT_PTR begin, UINT_PTR end, const signature& signature, DeviceScanCallback auto&& callback)
   {
-    copy copy{ src, dst, size, 0 };
+    for (auto address = begin; address != end; address++) {
+      const auto rv = scan(address, end, signature);
+      if (!rv) {
+        return std::unexpected(rv.error());
+      }
+      if (*rv == end) {
+        break;
+      }
+      if (!callback(*rv)) {
+        break;
+      }
+      address = *rv;
+    }
+    return {};
+  }
+
+  result<SIZE_T> read(UINT_PTR src, void* dst, SIZE_T size) noexcept
+  {
+    copy copy{ src, reinterpret_cast<UINT_PTR>(dst), size, 0 };
     if (const auto rv = control(code::read, &copy, sizeof(copy)); !rv) {
       return error(rv.error());
     }
     return copy.copied;
   }
 
-  result<SIZE_T> write(UINT_PTR src, UINT_PTR dst, SIZE_T size) noexcept
+  result<SIZE_T> write(const void* src, UINT_PTR dst, SIZE_T size) noexcept
   {
-    copy copy{ src, dst, size, 0 };
+    copy copy{ reinterpret_cast<UINT_PTR>(src), dst, size, 0 };
     if (const auto rv = control(code::write, &copy, sizeof(copy)); !rv) {
       return error(rv.error());
     }

@@ -1,6 +1,69 @@
 # DEUS
 Windows 10 KMDF driver for memory manipulation.
 
+```cpp
+#include <deus.hpp>
+#include <format>
+#include <iostream>
+#include <cstdlib>
+
+int main(int argc, char* argv[])
+{
+  try {
+    // Create test data.
+    const std::vector<unsigned char> data{
+      0x00, 0xDE, 0x01, 0xBE, 0x0EF, 0x00, 0x00, 0x42, 0x00,
+    };
+
+    // Create device.
+    deus::device device;
+    if (const auto rv = device.create(); !rv) {
+      throw std::system_error(rv.error(), "create");
+    }
+
+    // Open process.
+    if (const auto rv = device.open(GetCurrentProcessId()); !rv) {
+      throw std::system_error(rv.error(), "open");
+    }
+
+    // Query process memory regions.
+    const auto regions = device.query();
+    if (!regions) {
+      throw std::system_error(regions.error(), "query");
+    }
+
+    // Scan process memory regions for signature.
+    const deus::signature signature("DE??BEEF00");
+    for (auto& region : *regions) {
+      const auto begin = region.base_address;
+      const auto end = region.base_address + region.region_size;
+      const auto scan = device.scan(begin, end, signature, [&](UINT_PTR address) {
+        // Copy process memory to application memory.
+        unsigned char value = 0;
+        const auto read = device.read(address + 6, &value, sizeof(value));
+        if (!read) {
+          throw std::system_error(read.error(), "read");
+        }
+        std::cout << "read: " << std::format("0x{:02X}", value) << std::endl;
+        return true;
+      });
+      if (!scan) {
+        throw std::system_error(scan.error(), "scan");
+      }
+    }
+  }
+  catch (const std::system_error& e) {
+    std::cerr << e.code().category().name() << ' ' << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+  catch (const std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+```
+
 ## Build
 1. Install [Windows 11 WDK][wdk].
 2. Install [Python 3][py3] to `C:\Python`.

@@ -42,8 +42,6 @@ static constexpr UINT_PTR max = 0x000F0000'00000000;
 
 }  // namespace memory
 
-static constexpr UINT_PTR npos = 0xFFFFFFFF'FFFFFFFF;
-
 struct alignas(16) region : SLIST_ENTRY {
   UINT_PTR base_address{ 0 };
   UINT_PTR allocation_base{ 0 };
@@ -57,7 +55,7 @@ struct alignas(16) region : SLIST_ENTRY {
 struct alignas(16) scan {
   UINT_PTR begin{ 0 };
   UINT_PTR end{ 0 };
-  UINT_PTR pos{ npos };
+  UINT_PTR address{ 0 };
   SIZE_T size{ 0 };
 };
 

@@ -1,12 +1,11 @@
 #include "deus.h"
+#include <boost/algorithm/searching/boyer_moore_horspool.hpp>
 #include <wchar.h>
 #include <ntifs.h>
 #include <algorithm>
 #include <expected>
 #include <functional>
 #include <span>
-
-#include <boost/algorithm/searching/boyer_moore_horspool.hpp>
 
 extern "C" {
 
@@ -377,9 +376,7 @@ private:
     const auto process_zw = ZwCurrentProcess();
 
     // Search for the signature.
-    UINT_PTR pos = deus::npos;
-    NTSTATUS status = STATUS_SUCCESS;
-
+    auto address = end;
     if (mask) {
       std::size_t mask_index = 0;
       const auto compare = [&](BYTE lhs, BYTE rhs) noexcept {
@@ -390,26 +387,17 @@ private:
         return false;
       };
       const auto searcher = std::default_searcher(data, data + size, compare);
-      if (const auto it = std::search(begin, end, searcher); it != end) {
-        pos = reinterpret_cast<UINT_PTR>(it);
-      }
+      address = std::search(begin, end, searcher);
     } else {
-      //const auto searcher = std::boyer_moore_horspool_searcher(data, data + size);
       const auto searcher = boost::algorithm::boyer_moore_horspool(data, data + size);
-      //const auto searcher = std::default_searcher(data, data + size);
-      if (const auto it = std::search(begin, end, searcher); it != end) {
-        pos = reinterpret_cast<UINT_PTR>(it);
-      }
+      address = std::search(begin, end, searcher);
     }
 
     // Detach from process.
     KeUnstackDetachProcess(&state);
 
-    // Verify result.
-    if (!NT_SUCCESS(status)) {
-      return std::unexpected(status);
-    }
-    scan->pos = pos;
+    // Return position.
+    scan->address = reinterpret_cast<UINT_PTR>(address);
     return osize;
   }
 
