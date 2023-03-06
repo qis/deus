@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     };
 
     // Create test signature.
-    const deus::signature signature("DE??BEEF00");
+    const deus::signature signature("DE ?? BE EF 00");
 
     // Scan for signature in test data.
     signature.scan(data.data(), data.data() + data.size(), [](const void* data) noexcept {

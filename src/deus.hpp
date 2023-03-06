@@ -175,9 +175,11 @@ public:
     std::memcpy(data_.data() + size, mask, size);
   }
 
-  signature(std::string_view signature) noexcept : size_(signature.size() / 2)
+  signature(std::string_view signature) noexcept : size_((signature.size() + 1) / 3)
   {
-    assert(signature.size() % 2 == 0);
+    assert((signature.size() + 1) / 3 > 0);
+    assert((signature.size() + 1) % 3 == 0);
+
     if (signature.empty()) {
       return;
     }
@@ -185,14 +187,15 @@ public:
       data_.resize(size_ * 2);
       const auto mask = data_.data() + size_;
       for (SIZE_T i = 0; i < size_; i++) {
-        mask[i] = mask_cast(signature[i * 2]) << 4 | mask_cast(signature[i * 2 + 1]);
+        mask[i] = mask_cast(signature[i * 3]) << 4 | mask_cast(signature[i * 3 + 1]);
       }
     } else {
       data_.resize(size_);
     }
     const auto data = data_.data();
     for (SIZE_T i = 0; i < size_; i++) {
-      data[i] = data_cast(signature[i * 2]) << 4 | data_cast(signature[i * 2 + 1]);
+      data[i] = data_cast(signature[i * 3]) << 4 | data_cast(signature[i * 3 + 1]);
+      assert(i == 0 || signature[i * 3 - 1] == ' ');
     }
   }
 

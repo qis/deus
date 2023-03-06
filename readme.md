@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     }
 
     // Scan process memory regions for signature.
-    const deus::signature signature("DE??BEEF00");
+    const deus::signature signature("DE ?? BE EF 00");
     for (auto& region : *regions) {
       const auto begin = region.base_address;
       const auto end = region.base_address + region.region_size;
