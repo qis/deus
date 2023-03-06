@@ -88,15 +88,18 @@ cd C:\Workspace\deus
 conan install . -if third_party -pr conan.profile
 ```
 
-5. Create a copy of the Microsoft Visual C++ Redistributable.
+5. Build project in `x64 Native Tools Command Prompt for VS 2022`.
 
 ```cmd
-copy "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\v143\vc_redist.x64.exe" ^
-     "C:\Workspace\deus\third_party\"
+cd C:\Workspace\deus
+cmake -B build --preset release
+cmake --build build --target install
 ```
 
-## Debug
-1. Install [SandboxBootkit][sandbox] and run `sandbox.wsb`.
+<details>
+<summary><b>Debugging</b></summary>
+
+Install [SandboxBootkit][sandbox] and run `sandbox.wsb`.
 
 <!--
 cd C:\Program Files (x86)\Windows Kits\10\Debuggers\x64
@@ -105,8 +108,6 @@ CmDiag Debug -On -Net
 windbg.exe -k net:port=50100,key=cl.ea.rt.ext,target=127.0.0.1 -v
 C:\Workspace\deus\sandbox.wsb
 -->
-
-2. Execute commands in sandbox `cmd.exe`.
 
 ```cmd
 rem Start driver.
@@ -122,7 +123,14 @@ rem Query driver.
 sc query deus
 ```
 
+</details>
+
+## Install
+1. Boot system using [EfiGuard][efiguard].
+2. Run `deus.exe` to install and load the driver.
+
 [wdk]: https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk
 [py3]: https://www.python.org/downloads/windows/
 [conan]: https://conan.io/center/
 [sandbox]: https://github.com/thesecretclub/SandboxBootkit
+[efiguard]: https://github.com/Mattiwatti/EfiGuard

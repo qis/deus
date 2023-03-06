@@ -1,11 +1,11 @@
 #pragma once
 #include "deus.h"
-#include <ntstatus.h>
 #include <winioctl.h>
 #include <winternl.h>
 #include <algorithm>
 #include <concepts>
 #include <expected>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <span>
@@ -15,15 +15,80 @@
 #include <cassert>
 #include <cstddef>
 
-#ifdef DEUS_EXPORTS
-#  define DEUS_API __declspec(dllexport)
-#else
-#  define DEUS_API __declspec(dllimport)
-#endif
-
 namespace deus {
+namespace detail {
 
-DEUS_API std::error_category& error_category() noexcept;
+class error_category : public std::error_category {
+public:
+  const char* name() const noexcept override final
+  {
+    return "deus";
+  }
+
+  std::string message(int ev) const override final
+  {
+    const auto code = static_cast<DWORD>(ev);
+    const auto status = static_cast<NTSTATUS>(ev);
+    auto text = std::format("error 0x{:08X} ({}): ", code, status);
+    char* data = nullptr;
+    DWORD size = FormatMessage(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+      nullptr,
+      code,
+      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      reinterpret_cast<LPSTR>(&data),
+      0,
+      nullptr);
+    if (data) {
+      if (size) {
+        text.append(data, size);
+      }
+      LocalFree(data);
+      if (size) {
+        return text;
+      }
+    }
+    switch (code >> 30) {
+    case 0:
+      text.append("Unknown success.");
+      break;
+    case 1:
+      text.append("Unknown information.");
+      break;
+    case 2:
+      text.append("Unknown warning.");
+      break;
+    case 3:
+      text.append("Unknown error.");
+      break;
+    default:
+      text.append("Unknown status.");
+      break;
+    }
+    return text;
+  }
+};
+
+}  // namespace detail
+
+inline std::error_category& error_category() noexcept
+{
+  static detail::error_category category;
+  return category;
+}
+
+inline std::error_code error(DWORD code) noexcept
+{
+  return { static_cast<int>(code), error_category() };
+}
+
+inline std::error_code error(NTSTATUS status) noexcept
+{
+  return { static_cast<int>(status), error_category() };
+}
+
+template <typename T>
+using result = std::expected<T, std::error_code>;
 
 template <class T>
 concept ListEntry = std::is_base_of<SLIST_ENTRY, T>::value;
@@ -322,11 +387,8 @@ concept DeviceScanCallback = requires(T&& callback, UINT_PTR address) {
 
 // clang-format on
 
-class DEUS_API device {
+class device {
 public:
-  template <typename T>
-  using result = std::expected<T, std::error_code>;
-
   constexpr device() noexcept = default;
 
   constexpr device(device&& other) noexcept :
@@ -334,18 +396,56 @@ public:
   {}
 
   device(const device& other) = delete;
-  device& operator=(device&& other) noexcept;
+
+  device& operator=(device&& other) noexcept
+  {
+    destroy();
+    handle_ = std::exchange(other.handle_, INVALID_HANDLE_VALUE);
+    return *this;
+  }
+
   device& operator=(const device& other) = delete;
 
-  ~device();
+  ~device()
+  {
+    destroy();
+  }
 
-  result<void> create() noexcept;
-  result<void> destroy() noexcept;
+  result<void> create() noexcept
+  {
+    if (handle_ != INVALID_HANDLE_VALUE) {
+      return std::unexpected(error(ERROR_ALREADY_INITIALIZED));
+    }
+    const DWORD access = GENERIC_READ | GENERIC_WRITE;
+    const DWORD share_mode = OPEN_EXISTING;
+    const DWORD attributes = FILE_ATTRIBUTE_NORMAL;
+    handle_ = CreateFile("\\\\.\\Deus", access, 0, nullptr, share_mode, attributes, nullptr);
+    if (handle_ == INVALID_HANDLE_VALUE) {
+      return std::unexpected(error(static_cast<NTSTATUS>(GetLastError())));
+    }
+    auto v = version;
+    if (const auto rv = control(code::version, &v, sizeof(v)); !rv) {
+      CloseHandle(std::exchange(handle_, INVALID_HANDLE_VALUE));
+      return std::unexpected(rv.error());
+    }
+    return {};
+  }
+
+  result<void> destroy() noexcept
+  {
+    if (handle_ == INVALID_HANDLE_VALUE) {
+      return std::unexpected(error(STATUS_INVALID_HANDLE));
+    }
+    if (!CloseHandle(std::exchange(handle_, INVALID_HANDLE_VALUE))) {
+      return std::unexpected(error(GetLastError()));
+    }
+    return {};
+  }
 
   result<void> open(DWORD pid) noexcept
   {
     if (const auto rv = control(code::open, &pid, sizeof(pid)); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return {};
   }
@@ -353,7 +453,7 @@ public:
   result<void> close() noexcept
   {
     if (const auto rv = control(code::close); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return {};
   }
@@ -362,7 +462,7 @@ public:
   {
     list<region> regions;
     if (const auto rv = control(code::query, regions.header(), sizeof(*regions.header())); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return regions;
   }
@@ -376,7 +476,7 @@ public:
     const auto scan_size = sizeof(deus::scan) + data_size;
     const auto scan = static_cast<deus::scan*>(_aligned_malloc(scan_size, alignof(deus::scan)));
     if (!scan) {
-      return error(STATUS_NO_MEMORY);
+      return std::unexpected(error(STATUS_NO_MEMORY));
     }
     scan->begin = begin;
     scan->end = end;
@@ -387,7 +487,7 @@ public:
     const auto address = rv ? scan->address : end;
     _aligned_free(scan);
     if (!rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return address;
   }
@@ -414,7 +514,7 @@ public:
   {
     copy copy{ src, reinterpret_cast<UINT_PTR>(dst), size, 0 };
     if (const auto rv = control(code::read, &copy, sizeof(copy)); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return copy.copied;
   }
@@ -423,7 +523,7 @@ public:
   {
     copy copy{ reinterpret_cast<UINT_PTR>(src), dst, size, 0 };
     if (const auto rv = control(code::write, &copy, sizeof(copy)); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return copy.copied;
   }
@@ -431,7 +531,7 @@ public:
   result<void> watch(std::span<copy> data) noexcept
   {
     if (const auto rv = control(code::watch, data.data(), sizeof(copy) * data.size()); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return {};
   }
@@ -439,7 +539,7 @@ public:
   result<void> update() noexcept
   {
     if (const auto rv = control(code::update); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return {};
   }
@@ -447,7 +547,7 @@ public:
   result<void> stop() noexcept
   {
     if (const auto rv = control(code::stop); !rv) {
-      return error(rv.error());
+      return std::unexpected(rv.error());
     }
     return {};
   }
@@ -472,24 +572,9 @@ private:
   {
     DWORD size = 0;
     if (!DeviceIoControl(handle_, code, data, isize, data, osize, &size, nullptr)) {
-      return error(GetLastError());
+      return std::unexpected(error(GetLastError()));
     }
     return size;
-  }
-
-  static __forceinline std::unexpected<std::error_code> error(DWORD code) noexcept
-  {
-    return std::unexpected(std::error_code(static_cast<int>(code), error_category()));
-  }
-
-  static __forceinline std::unexpected<std::error_code> error(NTSTATUS status) noexcept
-  {
-    return std::unexpected(std::error_code(static_cast<int>(status), error_category()));
-  }
-
-  static __forceinline std::unexpected<std::error_code> error(std::error_code ec) noexcept
-  {
-    return std::unexpected(ec);
   }
 
   HANDLE handle_{ INVALID_HANDLE_VALUE };
