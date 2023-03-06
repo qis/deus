@@ -77,7 +77,7 @@ IncludeCategories:
     Priority: 1
 
   # Project Headers
-  - Regex: '^<horus/'
+  - Regex: '^<deus/'
     Priority: 2
     SortPriority: 0
 
