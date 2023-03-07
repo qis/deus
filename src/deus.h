@@ -4,6 +4,7 @@
 #  include <ntddk.h>
 #else
 #  include <windows.h>
+#  include <winioctl.h>
 #endif
 
 #if defined(DEUS_DRIVER) && !defined(BYTE)

@@ -44,6 +44,7 @@ target_link_libraries(main PRIVATE deus ntdll)
 
 file(GLOB_RECURSE dsefix src/dsefix/*.h src/dsefix/*.c src/dsefix/*.cpp)
 target_link_libraries(main PRIVATE legacy_stdio_definitions)
+target_compile_definitions(main PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_include_directories(main PRIVATE src/dsefix)
 target_sources(main PRIVATE ${dsefix})
 
