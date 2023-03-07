@@ -89,9 +89,17 @@ IncludeCategories:
   - Regex: '^<(ntddk|ntddkbd|ntddmou|ntstatus|wdm)\.h>'
     Priority: 6
 
-    # Windows Headers
-  - Regex: '^<(wdf|shellapi|winioctl|winternl|winsock2|ws2tcpip|mswsock)\.h>'
+    # DirectX Headers
+  - Regex: '^<(d2d.*|d3d.*|dxgi.*|dwrite.*|dcomp)\.h>'
     Priority: 7
+
+    # Windows Runtime Headers
+  - Regex: '^<wrl/'
+    Priority: 8
+
+    # Windows Headers
+  - Regex: '^<(wdf|commctrl|shellapi|winioctl|winternl|winsock2|ws2tcpip|mswsock|unknwn)\.h>'
+    Priority: 9
 
     # GTest Headers
   - Regex: '^<(gtest|gmock)/'
@@ -104,11 +112,11 @@ IncludeCategories:
 
     # C Compatibility Headers
   - Regex: '^<c(a|c|e|f|i|l|m|s|t|u|w)'
-    Priority: 9
+    Priority: 11
 
     # C++ Standard Library Headers
   - Regex: '^<'
-    Priority: 8
+    Priority: 10
 
 # Sources: a.hpp is main include for a.cpp, a_test.cpp, etc.
 IncludeIsMainRegex: '(_test|_win32|_posix)?$'
