@@ -275,7 +275,7 @@ private:
       }
 
       // Skip non-committed, non-accessible and guarded regions.
-      if (!(mbi.State & MEM_COMMIT) || (mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD))) {
+      if (mbi.State != MEM_COMMIT || (mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD))) {
         continue;
       }
 
@@ -293,7 +293,6 @@ private:
         reinterpret_cast<UINT_PTR>(mbi.AllocationBase),
         mbi.AllocationProtect,
         mbi.RegionSize,
-        mbi.State,
         mbi.Protect,
         mbi.Type,
       };
