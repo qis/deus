@@ -1,20 +1,16 @@
 cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
 project(deus DESCRIPTION "DEUS" VERSION 0.1.0 LANGUAGES C CXX)
 
-# Conan
-list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-
 # Dependencies
-find_package(Boost REQUIRED COMPONENTS headers)
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 find_package(WDK REQUIRED)
 
 # Driver
 wdk_add_driver(driver KMDF 1.15 WINVER 0x0A00 src/deus.h src/deus.cpp)
 set_target_properties(driver PROPERTIES OUTPUT_NAME deus)
-target_compile_definitions(driver PRIVATE DEUS_DRIVER NOMINMAX BOOST_DISABLE_ASSERTS)
+target_compile_definitions(driver PRIVATE DEUS_DRIVER NOMINMAX)
 target_compile_features(driver PRIVATE cxx_std_23)
-
-target_include_directories(driver PRIVATE src ${Boost_INCLUDE_DIRS})
+target_include_directories(driver PRIVATE src)
 
 set_target_properties(driver PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/driver

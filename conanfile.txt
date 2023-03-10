@@ -1,5 +1,0 @@
-[requires]
-boost/[x]
-
-[generators]
-cmake_find_package

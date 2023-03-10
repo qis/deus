@@ -66,8 +66,7 @@ int main(int argc, char* argv[])
 
 ## Build
 1. Install [Windows 11 WDK][wdk].
-2. Install [Python 3][py3] to `C:\Python`.
-3. Clone this repository to `C:\Workspace\deus`.
+2. Clone this repository to `C:\Workspace\deus`.
 
 ```cmd
 git clone git@github.com:qis/deus C:/Workspace/deus
@@ -75,20 +74,7 @@ cd C:\Workspace\deus
 git submodule update --init --depth 1
 ```
 
-4. Install dependencies using [Conan][conan].
-
-<!--
-* Set the system environment variable `CONAN_USER_HOME_SHORT` to `None`.
-* Upgrade pip with `python -m pip install --upgrade pip`.
-* Upgrade conan with `pip install conan --upgrade`.
--->
-
-```cmd
-cd C:\Workspace\deus
-conan install . -if third_party -pr conan.profile
-```
-
-5. Build project in `x64 Native Tools Command Prompt for VS 2022`.
+3. Build project in `x64 Native Tools Command Prompt for VS 2022`.
 
 ```cmd
 cd C:\Workspace\deus
@@ -130,7 +116,5 @@ sc query deus
 2. Run `deus.exe` to install and load the driver.
 
 [wdk]: https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk
-[py3]: https://www.python.org/downloads/windows/
-[conan]: https://conan.io/center/
 [sandbox]: https://github.com/thesecretclub/SandboxBootkit
 [efiguard]: https://github.com/Mattiwatti/EfiGuard

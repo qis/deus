@@ -25,16 +25,15 @@ enum class code : ULONG {
   open    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_IN_DIRECT,  FILE_SPECIAL_ACCESS),
   close   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_NEITHER,    FILE_SPECIAL_ACCESS),
   query   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x803, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
-  scan    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x804, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
-  read    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x805, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
-  write   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x806, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
-  watch   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x807, METHOD_IN_DIRECT,  FILE_SPECIAL_ACCESS),
-  update  = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x808, METHOD_NEITHER,    FILE_SPECIAL_ACCESS),
-  stop    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x809, METHOD_NEITHER,    FILE_SPECIAL_ACCESS),
+  read    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x804, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
+  write   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x805, METHOD_OUT_DIRECT, FILE_SPECIAL_ACCESS),
+  watch   = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x806, METHOD_IN_DIRECT,  FILE_SPECIAL_ACCESS),
+  update  = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x807, METHOD_NEITHER,    FILE_SPECIAL_ACCESS),
+  stop    = CTL_CODE(FILE_DEVICE_UNKNOWN, 0x808, METHOD_NEITHER,    FILE_SPECIAL_ACCESS),
 };
 // clang-format on
 
-inline constexpr DWORD version = 2;
+inline constexpr DWORD version = 3;
 
 namespace memory {
 
@@ -67,13 +66,6 @@ struct alignas(16) region : SLIST_ENTRY {
   /// The type of pages in the region. The following types are defined.
   /// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information
   ULONG type{ 0 };
-};
-
-struct alignas(16) scan {
-  UINT_PTR begin{ 0 };
-  UINT_PTR end{ 0 };
-  UINT_PTR address{ 0 };
-  SIZE_T size{ 0 };
 };
 
 struct alignas(32) copy {

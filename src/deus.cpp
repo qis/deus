@@ -1,5 +1,4 @@
 #include "deus.h"
-#include <boost/algorithm/searching/boyer_moore_horspool.hpp>
 #include <wchar.h>
 #include <ntifs.h>
 #include <algorithm>
@@ -158,8 +157,6 @@ public:
       return close();
     case code::query:
       return query(buffer, osize);
-    case code::scan:
-      return scan(buffer, osize);
     case code::read:
       return copy(buffer, osize, true);
     case code::write:
@@ -338,65 +335,6 @@ private:
       }
       return std::unexpected(status);
     }
-    return osize;
-  }
-
-  result scan(PVOID buffer, ULONG osize) noexcept
-  {
-    // Validate parameters.
-    if (!buffer) {
-      return std::unexpected(STATUS_INVALID_USER_BUFFER);
-    }
-    if (osize <= sizeof(deus::scan)) {
-      return std::unexpected(STATUS_INVALID_BUFFER_SIZE);
-    }
-
-    const auto scan = reinterpret_cast<deus::scan*>(buffer);
-    const auto begin = reinterpret_cast<BYTE*>(scan->begin);
-    const auto end = reinterpret_cast<BYTE*>(scan->end);
-    const auto size = scan->size;
-    const auto data = reinterpret_cast<BYTE*>(scan + 1);
-    const auto mask = osize == sizeof(deus::scan) + size * 2 ? data + size : nullptr;
-
-    if (!mask && osize != sizeof(deus::scan) + size) {
-      return std::unexpected(STATUS_INVALID_BUFFER_SIZE);
-    }
-
-    // Validate state.
-    const auto process = process_;
-    const auto application = application_zw_;
-    if (!process || !application) {
-      return std::unexpected(STATUS_INVALID_DEVICE_STATE);
-    }
-
-    // Attach to process.
-    KAPC_STATE state = {};
-    KeStackAttachProcess(process, &state);
-    const auto process_zw = ZwCurrentProcess();
-
-    // Search for the signature.
-    auto address = end;
-    if (mask) {
-      std::size_t mask_index = 0;
-      const auto compare = [&](BYTE lhs, BYTE rhs) noexcept {
-        if ((lhs & mask[mask_index++]) == rhs) {
-          return true;
-        }
-        mask_index = 0;
-        return false;
-      };
-      const auto searcher = std::default_searcher(data, data + size, compare);
-      address = std::search(begin, end, searcher);
-    } else {
-      const auto searcher = boost::algorithm::boyer_moore_horspool(data, data + size);
-      address = std::search(begin, end, searcher);
-    }
-
-    // Detach from process.
-    KeUnstackDetachProcess(&state);
-
-    // Return position.
-    scan->address = reinterpret_cast<UINT_PTR>(address);
     return osize;
   }
 

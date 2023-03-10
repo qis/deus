@@ -18,8 +18,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
-        "CMAKE_RC_FLAGS": "/nologo -DWIN32",
-        "CONAN_CMAKE_SILENT_OUTPUT": true
+        "CMAKE_RC_FLAGS": "/nologo -DWIN32"
       }
     },
     {
@@ -35,8 +34,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
-        "CMAKE_RC_FLAGS": "/nologo -DWIN32",
-        "CONAN_CMAKE_SILENT_OUTPUT": true
+        "CMAKE_RC_FLAGS": "/nologo -DWIN32"
       }
     }
   ],
