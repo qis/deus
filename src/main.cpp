@@ -161,7 +161,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR cmd, 
     // Create device.
     deus::device device;
     if (const auto rv = device.create(); !rv) {
-      if (rv.error().value() != ERROR_FILE_NOT_FOUND) {
+      const auto ev = rv.error().value();
+      if (ev != ERROR_FILE_NOT_FOUND && ev != ERROR_REMOTE_FILE_VERSION_MISMATCH) {
         throw std::system_error(rv.error(), "create");
       }
     } else {
