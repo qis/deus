@@ -90,7 +90,7 @@ IncludeCategories:
     Priority: 6
 
     # DirectX Headers
-  - Regex: '^<(d2d.*|d3d.*|dxgi.*|dwrite.*|dcomp)\.h>'
+  - Regex: '^<(d2d.*|d3d.*|dxgi.*|dwrite.*|dinput.*|dcomp)\.h>'
     Priority: 7
 
     # Windows Runtime Headers
