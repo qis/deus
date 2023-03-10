@@ -2,17 +2,14 @@
 #include "deus.h"
 #include <winioctl.h>
 #include <winternl.h>
-#include <algorithm>
-#include <concepts>
 #include <expected>
 #include <format>
-#include <functional>
 #include <iterator>
 #include <span>
 #include <string_view>
 #include <system_error>
-#include <vector>
-#include <cassert>
+#include <type_traits>
+#include <utility>
 #include <cstddef>
 
 namespace deus {

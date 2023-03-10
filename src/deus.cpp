@@ -1,10 +1,10 @@
 #include "deus.h"
 #include <wchar.h>
 #include <ntifs.h>
-#include <algorithm>
 #include <expected>
-#include <functional>
 #include <span>
+#include <utility>
+#include <cstddef>
 
 extern "C" {
 
