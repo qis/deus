@@ -142,7 +142,7 @@ void install(bool load)
   AdjustCiOptions(0x6, &OldCiOptionsValue);
 
   // Report errors.
-  if (!NT_SUCCESS(status)) {
+  if (NT_ERROR(status)) {
     throw std::system_error(deus::error(status), "NtLoadDriver");
   }
 }

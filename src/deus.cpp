@@ -1,6 +1,5 @@
 #include "deus.h"
 #include <wchar.h>
-#include <ntifs.h>
 #include <expected>
 #include <span>
 #include <utility>
@@ -57,7 +56,7 @@ public:
     // Create device.
     auto status =
       IoCreateDevice(driver, 0, &device_name_, FILE_DEVICE_UNKNOWN, FILE_DEVICE_SECURE_OPEN, FALSE, &device_);
-    if (!NT_SUCCESS(status)) {
+    if (NT_ERROR(status)) {
       return status;
     }
     if (!device_) {
@@ -70,7 +69,7 @@ public:
     // Create symbolic link.
     IoDeleteSymbolicLink(&symbolic_link_name_);
     status = IoCreateSymbolicLink(&symbolic_link_name_, &device_name_);
-    if (!NT_SUCCESS(status)) {
+    if (NT_ERROR(status)) {
       return status;
     }
     return STATUS_SUCCESS;
@@ -203,7 +202,7 @@ private:
 
     // Acquire process handle.
     const auto pid = reinterpret_cast<HANDLE>(*reinterpret_cast<DWORD*>(buffer));
-    if (const auto status = PsLookupProcessByProcessId(pid, &process_); !NT_SUCCESS(status)) {
+    if (const auto status = PsLookupProcessByProcessId(pid, &process_); NT_ERROR(status)) {
       return std::unexpected(status);
     }
     if (!process_) {
@@ -264,7 +263,7 @@ private:
       constexpr auto info = static_cast<MEMORY_INFORMATION_CLASS>(MemoryBasicInformationEx);
       const auto address = reinterpret_cast<PVOID>(pos);
       status = ZwQueryVirtualMemory(process_zw, address, info, &mbi, sizeof(mbi), &size);
-      if (!NT_SUCCESS(status)) {
+      if (NT_ERROR(status)) {
         if (status == STATUS_INVALID_PARAMETER) {
           status = STATUS_SUCCESS;
         }
@@ -309,7 +308,7 @@ private:
         constexpr ULONG type = MEM_RESERVE | MEM_COMMIT;
         constexpr ULONG protect = PAGE_READWRITE;
         status = ZwAllocateVirtualMemory(application, &data, 0, &size, type, protect);
-        if (!NT_SUCCESS(status)) {
+        if (NT_ERROR(status)) {
           continue;
         }
         if (!data || size < sizeof(region)) {
@@ -325,7 +324,7 @@ private:
     }
 
     // Free allocated application memory on error.
-    if (!NT_SUCCESS(status)) {
+    if (NT_ERROR(status)) {
       for (auto entry = InterlockedFlushSList(reinterpret_cast<PSLIST_HEADER>(buffer)); entry;) {
         const auto next = entry->Next;
         PVOID data = entry;
@@ -370,7 +369,7 @@ private:
     PEPROCESS sp = read ? process : application;
     PEPROCESS dp = read ? application : process;
     const auto status = MmCopyVirtualMemory(sp, src, dp, dst, copy->size, KernelMode, &copy->copied);
-    if (!NT_SUCCESS(status)) {
+    if (NT_ERROR(status)) {
       return std::unexpected(status);
     }
     return osize;
@@ -512,7 +511,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT driver, PUNICODE_STRING path)
 
   // Initialize driver.
   auto status = deus::driver.initialize(driver);
-  if (!NT_SUCCESS(status)) {
+  if (NT_ERROR(status)) {
     deus::driver.reset();
   }
   return status;

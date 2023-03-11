@@ -355,7 +355,9 @@ private:
   {
     DWORD size = 0;
     if (!DeviceIoControl(handle_, code, data, isize, data, osize, &size, nullptr)) {
-      return std::unexpected(error(GetLastError()));
+      if (const auto ev = GetLastError(); ev != ERROR_PARTIAL_COPY) {
+        return std::unexpected(error(ev));
+      }
     }
     return size;
   }
