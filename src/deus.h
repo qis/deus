@@ -33,7 +33,7 @@ enum class code : ULONG {
 };
 // clang-format on
 
-inline constexpr DWORD version = 3;
+constexpr DWORD version = 3;
 
 namespace memory {
 
