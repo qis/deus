@@ -1,10 +1,10 @@
 #pragma once
 #ifdef DEUS_DRIVER
-#  include <ntifs.h>
-#  include <ntddk.h>
+#include <ntifs.h>
+#include <ntddk.h>
 #else
-#  include <windows.h>
-#  include <winioctl.h>
+#include <windows.h>
+#include <winioctl.h>
 #endif
 
 #if defined(DEUS_DRIVER) && !defined(BYTE)
