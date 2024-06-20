@@ -81,15 +81,27 @@ See [src/test.cpp](src/test.cpp) for a more detailed example.
 2. Install [Windows 11 WDK][wdk].
 3. Open [solution.sln](solution.sln) and build the `deus` project.
 4. View kernel debug messages with [DebugView][dbg].
-5. Load the driver with [KDU][kdu] as administrator.
+5. Disable Windows security features and reboot the system.
+
+```
+Start > "Core isolation"
+[ ] Memory integrity
+[ ] Microsoft Vulnerable Driver Blocklist
+```
 
 ```cmd
-kdu -map deus.sys
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "EnableVirtualizationBasedSecurity" /t REG_DWORD /d 0 /f
+```
+
+6. Load the driver with [KDU][kdu] as administrator.
+
+```cmd
+kdu -map bin\deus.sys
 ```
 
 **WARNING**: Loading the driver multiple times should work, but causes blue screens for now.
 
-6. Add DEUS to your CMake project.
+7. Add DEUS to your CMake project.
 
 ```cmake
 list(APPEND CMAKE_PREFIX_PATH path/to/deus/cmake)
@@ -97,7 +109,7 @@ find_package(deus REQUIRED)
 target_link_libraries(main PRIVATE deus::deus)
 ```
 
-7. Add DEUS to your VS project.
+8. Add DEUS to your VS project.
   - Add `%PATH_TO_DEUS%/include` to include directories.
   - Add `UMDF_USING_NTSTATUS` to definitions.
   - Add `/std:c++latest` to compiler option.
