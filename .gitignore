@@ -1,0 +1,14 @@
+*.suo
+*.user
+*.sln.docstates
+/*
+.*
+!/cmake/
+!/include/
+!/src/
+!/.clang-format
+!/.gitattributes
+!/.gitignore
+!/license.txt
+!/readme.md
+!/solution.sln

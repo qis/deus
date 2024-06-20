@@ -1,0 +1,30 @@
+// 统一码 UTF-8
+#include <windows.h>
+
+101 ICON "test.ico"
+
+VS_VERSION_INFO VERSIONINFO
+  PRODUCTVERSION 0, 2, 0, 0
+  FILEVERSION    0, 2, 0, 0
+  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifndef NDEBUG
+  FILEFLAGS VS_FF_DEBUG
+#else
+  FILEFLAGS 0
+#endif
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "0000FDE9"
+    BEGIN
+      VALUE "FileDescription",  "deus"
+      VALUE "ProductName",      "DEUS"
+      VALUE "LegalCopyright",   "Alexej Harm"
+      VALUE "ProductVersion",   "0.2.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0, 0xFDE9  // CP_UTF8 (65001)
+  END
+END

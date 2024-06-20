@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="deus">
+      <UniqueIdentifier>{95d8980e-1fec-4ea7-9b44-aac1b87368b5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\deus\error.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\deus\keyboard.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\deus\mouse.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\deus\result.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\deus\device.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="ntdll.hpp" />
+    <ClInclude Include="..\include\deus.hpp" />
+    <ClInclude Include="..\include\deus\utility.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\deus\list.hpp">
+      <Filter>deus</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="deus.cpp" />
+  </ItemGroup>
+</Project>
